@@ -18,20 +18,14 @@ Those specs covers FHIR part of an app, leave place for bare business logic.
 
 ### What does exactly it cover?
 (1), describing formats, make possible:
-
-1.1 client; UI generation (result is generic)
-
-1.2 client; validation
-
-1.3 server; participates in setting communication interface (what data it awaits?)
-
-1.4 server; validation
+- 1.1 client; UI generation (result is generic)
+- 1.2 client; validation
+- 1.3 server; participates in setting communication interface (what data it awaits?)
+- 1.4 server; validation
 
 (2), telling which operations are supported and how to perform
-
-2.1 server; finalizes the info we need for server interface creation (how to knock?)
-
-2.2 client; this also nails client-required information of server to it's url (we know the rest)
+- 2.1 server; finalizes the info we need for server interface creation (how to knock?)
+- 2.2 client; this also nails client-required information of server to it's url (we know the rest)
 
 (3), describing resource transitions, tells us how to achieve cross-version interoperability
 
@@ -63,30 +57,20 @@ I made such decisions:
 3) HANDWRITTEN. the same mock (though some handwritten transformations will still present, as the spec doesn't carry complete instructions)
 
 ### Now, how my choices would look in app:
-1.2 client validation
-
--- pupeno/free-form - Reagent on (optionally) re-frame
-
-   It lets you enhance your forms usual forms
-
-   For it's validation to work it waits from you three things: values, errors, callback on form vals state change
-
-   val - a resource
-
-   err - (conform resource-spec val)
-
-   on-state-change - whatever you like
-
-   You shall mark which inputs correspond to which resource fields, what to do on error.
-
-   Client validation is set!
-
-
-1.3, 1.4  clojure.spec's are attached to endpoints
-
-2.1 compojure routes generation for resources
-
-2.2 (resource->url base-url resource) => url  (yet to add (simple))
+- 1.2 client validation
+  ```
+  pupeno/free-form - Reagent on (optionally) re-frame
+  It lets you enhance your forms usual forms
+  For it's validation to work it waits from you three things: values, errors, callback on form vals state change
+  val - a resource
+  err - (conform resource-spec val)
+  on-state-change - whatever you like
+  You shall mark which inputs correspond to which resource fields, what to do on error.
+  Client validation is set!
+  ```
+- 1.3, 1.4  clojure.spec's are attached to endpoints
+- 2.1 compojure routes generation for resources
+- 2.2 (resource->url base-url resource) => url  (yet to add (simple))
 
 3 available as Ring middleware
 
@@ -112,6 +96,7 @@ to finish the mock-demo experience:
 
 ### Server
 
+```
 [fhir-spec "version"]
 
 (require '[fhir-spec.compojure])
@@ -121,7 +106,7 @@ to finish the mock-demo experience:
                                                     :ends {:read   #(println "Req on Patient Read" %)
                                                            :create #(println "Req on Patient Create" %)
                                                            :patch  #(println "Req on Patient Patch" %)}}])
-
+```
 
 
 You've done good reading so far, you sure have some balls.
