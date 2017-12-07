@@ -71,8 +71,7 @@ I made such decisions:
 - 1.3, 1.4  clojure.spec's are attached to endpoints
 - 2.1 compojure routes generation for resources
 - 2.2 (resource->url base-url resource) => url  (yet to add (simple))
-
-3 available as Ring middleware
+- 3 available as Ring middleware
 
 
 It leaves us with very universal FHIR interaction solution
