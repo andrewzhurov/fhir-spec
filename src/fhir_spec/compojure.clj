@@ -10,21 +10,25 @@
 (s/def ::interaction #{:read :vread :update :patch :delete ;; Instance level Interactions
                        :create ;; Type level Interactions
                        })
+(def transitable-interactions #{:update :patch :create})
 (s/def ::handler any?) ;; ifn? fails in macro
 (s/def ::route #(instance? compojure.api.routes.Route %))
 
 (s/def ::ends (s/map-of ::interaction ::handler))
-(s/def ::resource (s/merge :fhir-spec.common/resource (s/keys :req-un [::ends])))
+(s/def ::desired-version fhir-spec.info/supported-resource-versions)
+(s/def ::resource (s/merge :fhir-spec.common/resource (s/keys :req-un [::ends
+                                                                       ::desired-version])))
 (s/def ::resources (s/coll-of (s/and ::resource
                                      :fhir-spec.info/supported-resource)))
+(s/def ::route-opts (s/keys :req-un [::desired-version]))
 ;; Middlewares
 
-(defn transit-versions-middleware [to-version handler]
+(defn transit-versions-middleware [from-version to-version handler]
   (fn [request]
-    (let [resource         (:body-params request)
-          from-version     (:fhir-version resource)]
-      (println "Coercing FHIR resource; to version:" to-version "; from version:" from-version "; resource:" resource)
-      (transit from-version to-version resource))))
+    (if-let [resource (:body-params request)]
+      (do (println "Transiting FHIR resource; from version:" from-version "; to version:" to-version  "; resource:" resource)
+          (handler (assoc request :body-params (transit from-version to-version resource))))
+      (handler request))))
 
 ;; Routes
 
@@ -61,27 +65,34 @@
                        :handler handler}})
                    ends))))))
 
+(defn interaction->route-params [interaction]
+  {:method  (case interaction
+              :read 'GET
+              :vread 'GET
+              :update 'PUT
+              :patch 'PATCH
+              :delete 'DELETE
+              :create 'POST)
+   :path  (case interaction 
+            :vread "/:id/_history/:vid"
+            :create "/"
+            "/:id")
+   :transitable? (contains? transitable-interactions interaction)})
+
 (defmacro resource-endpoints ;; Version through Schema, not data-oriented way
   "Creates resource endpoints
    About interactions: www.hl7.org/fhir/http.html"
-  [{:keys [version type ends] :as resource}]
-  (let [to-http-method (fn [interaction] (case interaction
-                                           :read 'GET
-                                           :vread 'GET
-                                           :update 'PUT
-                                           :patch 'PATCH
-                                           :delete 'DELETE
-                                           :create 'POST))
-        path (fn [interaction] (str "/"  (case interaction 
-                                           :vread ":id/_history/:vid"
-                                           ":id")))]
-    `(context ~(str "/" version"/" (name type)) [] 
-      :tags ~[version]
-      ~@(map (fn [[interaction handler]]
-               `(~(to-http-method interaction) ~(path interaction) req#
-                 :summary ~(str (clojure.string/upper-case (name interaction)) " interaction")
-                 (~handler req#)))
-             ends))))
+  [{:keys [desired-version version type ends] :as resource}]
+  `(context ~(str "/" version"/" (name type)) [] 
+     :tags ~[version]
+     ~@(map (fn [[interaction handler]]
+              (let [{:keys [method path transitable?]} (interaction->route-params interaction)]
+                (list method path []
+                      :middleware (when (and transitable? (not= version desired-version))
+                                    [`(partial transit-versions-middleware ~version ~desired-version)])
+                      :summary (str (clojure.string/upper-case (name interaction)) " interaction")
+                      handler)))
+            ends)))
 
 
 (s/fdef fhir-resources-flat
@@ -104,15 +115,22 @@
   (s/map-of fhir-spec.info/supported-resource-versions (s/map-of :fhir-spec.info/resource-name (s/map-of ::interaction ::handler))))
 
 (s/fdef fhir-resources
-   :args (s/cat :tree-description ::resources-tree-description)
+   :args (s/cat :opts ::route-opts
+                :tree-description ::resources-tree-description)
    :ret ::route)
 
 (defmacro fhir-resources
   "Lets you specify your resources in a human-friendly way
-   If description isn't written by hand consider 'fhir-resources-flat'"
-  [tree-description]
+   If description isn't written by hand consider 'fhir-resources-flat'
+  
+   Why desired-version is a mandatory opt?
+   Problem: we need two additional things, aside of resource itself,
+   to know how(if) to transition it: it's version and desired version.
+   First one we get from the context of endpoint
+   Second we cannot know ahead of time, it is state that shall be specified in-place."
+  [opts tree-description]
   `(context "/fhir-resources" []
      :tags ["fhir-resources"]
      ~@(for [[version resource] tree-description
              [type    ends]     resource]
-         `(resource-endpoints ~{:version version :type type :ends ends}))))
+         `(resource-endpoints ~{:desired-version (:desired-version opts) :version version :type type :ends ends}))))
