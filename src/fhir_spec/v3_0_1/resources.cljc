@@ -26,12 +26,12 @@
 
 ;; Complex
 
-(s/def ::Person (s/keys :req-un [::name
+(s/def ::Patient (s/keys :req-un [::name
                                  ::gender]
                         :opt-un [::active
                                  ::generalPractitioner]))
-(s/def :fhir-spec.3.0.1.resources.Person.generalPractitioner/reference (resource-reference ["Organization" "Practitioner"]))
-(s/def ::generalPractitioner (s/* (s/keys :req-un [:fhir-spec.3.0.1.resources.Person.generalPractitioner/reference])))
+(s/def :fhir-spec.3.0.1.resources.Patient.generalPractitioner/reference (resource-reference ["Organization" "Practitioner"]))
+(s/def ::generalPractitioner (s/* (s/keys :req-un [:fhir-spec.3.0.1.resources.Patient.generalPractitioner/reference])))
 (s/def ::active ::boolean)
 (s/def ::gender (s/and ::code #{"male" "female" "other" "unknown"}))
 (s/def ::name   (s/* ::HumanName))
