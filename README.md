@@ -88,6 +88,11 @@ to finish the mock-demo experience:
 - attach clojure.spec only to appropriate routes
 - provide resource->url func
 - turn on generative testing
+- support a smarter way for transitions:
+  - build an 'available transitions' graph for resources
+  - find the shortest/best path for transition 
+  - integrate it with current `transit`
+  - (graph path search algorithm: wikipedia.org/wiki/Dijkstra%27s_algorithm)
 - make beautiful Markdown README, not this wreckage
 
 
