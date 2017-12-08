@@ -2,9 +2,9 @@
   (:require [clojure.spec.alpha :as s]))
                
 (def supported-resource-versions #{"1.0.2" "1.8.0" "3.0.1"})
-(def supported-resources {"3.0.1" [:Patient :Coverage]
-                          "1.8.0" [:Patient]
-                          "1.0.2" [:Coverage]})
+(def supported-resources {"3.0.1" #{:Patient :Coverage}
+                          "1.8.0" #{:Patient}
+                          "1.0.2" #{:Coverage}})
 
 (defn resource-supported? [{:keys [version type]}]
   (contains? (get supported-resources version) type))
@@ -14,3 +14,4 @@
 
 (s/def ::version #(re-matches #"(\d+\.?)*\d+" %))
 (s/def ::supported-resource resource-supported?)
+(s/def ::resource-name keyword?)
